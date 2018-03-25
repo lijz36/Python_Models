@@ -172,7 +172,6 @@ class C_ProxyCrawlerGet(object):
                 self.startCrawler()
 
 
-
 @__singletion
 class C_SeleniumPhantomJSCrawler(object):
     def __init__(self, url, browserPath, outPath, parser='html5lib'):
@@ -253,10 +252,34 @@ class C_ProxySpider(object):
 
     def startSpider(self):
         html = self.__getHtml()
-        lists = self.__getAllList(html)
-        for item in lists:
-            result = self.__getOne(item) + '\n'
-            self.__writeFiles(result)
+        if html is not None:
+            lists = self.__getAllList(html)
+            if len(lists) > 0:
+                for item in lists:
+                    result = self.__getOne(item) + '\n'
+                    self.__writeFiles(result);
+                self.logger.info("爬取成功：" + self.url)
+            else:
+                self.logger.error("没有爬取到页面数据：" + self.url)
+                return
+
+            pattern = '(https://www.douban.com/doulist/3516235/\?start=.*?)"'
+            itemUrls = re.findall(pattern, html)
+            self.spidered_queue.append(self.url)
+            if len(itemUrls) > 0:
+                for itemUrl in itemUrls:
+                    if itemUrl not in self.spidered_queue \
+                            and itemUrl not in self.spider_queue:
+                        self.spider_queue.append(itemUrl)
+                while self.spider_queue:
+                    self.url = self.spider_queue.pop(0)
+                    self.startSpider()
+            else:
+                self.logger.error("没有更多页面数据了！")
+                return
+        else:
+            self.logger.error("获取页面信息失败")
+            return
 
     def __writeFiles(self, results):
         with open(self.fileName, 'a', encoding=self.charset) as f:
